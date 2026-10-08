@@ -8,7 +8,7 @@ from initialization import calculate_w_random, calculate_q_start
 from model import calculate_sgd
 from metric import calculate_accuracy
 from data_preprocessing import train_and_test, standardize, X, y, feature_names
-from report import (evaluate, print_run, print_summary, plot_margins, plot_multistart,
+from report import (evaluate, print_run, print_summary, plot_margins, plot_margins_start_vs_final, plot_multistart,
                     plot_roc, plot_confusion_matrices, plot_weights)
 np.random.seed(42)  # фиксируем случайность, чтобы результаты совпадали с README
 
@@ -72,6 +72,7 @@ print_summary(all_metrics, all_runs)
 
 if SHOW_PLOTS:
     plot_margins(all_runs, X_train, y_train, X_test, y_test)  # 2 — отступы
+    plot_margins_start_vs_final(all_runs, X_train, y_train, X_test, y_test)  # отступы до и после обучения
     if "9.2 мультистарт" in all_runs:  # график есть только если 9.2 запускался
         plot_multistart(all_runs["9.2 мультистарт"])
     plot_roc(all_runs, X_test, y_test)

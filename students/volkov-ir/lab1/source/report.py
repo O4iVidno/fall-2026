@@ -118,6 +118,36 @@ def plot_margins(all_runs, X_train, y_train, X_test, y_test, file_name="margins.
     _finish(file_name)
 
 
+def plot_margins_start_vs_final(all_runs, X_train, y_train, X_test, y_test, file_name="margins_start_vs_final.png"):
+    """Отступы до и после обучения: серая линия - стартовые веса, чёрная - итоговые.
+    Показывает, что именно делает обучение: поднимает отступы вверх и сокращает число ошибок.
+    Берутся только методы, у которых известны стартовые веса (9.1, 9.2, 9.3)."""
+    runs = {name: run for name, run in all_runs.items() if "w_start" in run}
+    n = len(runs)
+    fig, axes = plt.subplots(n, 2, figsize=(12, 3 * n), squeeze=False)
+
+    for row, (name, run) in enumerate(runs.items()):
+        for col, (X, y, part) in enumerate([(X_train, y_train, "train"), (X_test, y_test, "test")]):
+            ax = axes[row][col]
+            M_start = np.sort(calculate_margin(X, y, run["w_start"]))
+            M_final = np.sort(calculate_margin(X, y, run["w"]))
+            idx = np.arange(len(M_final))
+            ax.plot(idx, M_start, color="gray", linestyle="--", label="старт")
+            ax.plot(idx, M_final, color="black", label="после обучения")
+            ax.fill_between(idx, M_final, 0, where=M_final < 0, color="tab:red", alpha=0.3)
+            ax.axhline(0, color="gray", linewidth=0.8)
+            ax.axhline(1, color="tab:green", linewidth=0.8, linestyle=":", label="M = 1 (минимум потерь)")
+            err_start, err_final = np.sum(M_start < 0), np.sum(M_final < 0)
+            ax.set_title(f"{name} - {part} (ошибок: {err_start} -> {err_final} из {len(M_final)})")
+            ax.set_xlabel("объекты, отсортированные по отступу")
+            ax.set_ylabel("отступ M")
+            if row == 0 and col == 0:
+                ax.legend(loc="upper left", fontsize=8)
+
+    fig.tight_layout()
+    _finish(file_name)
+
+
 def plot_roc(all_runs, X_test, y_test, file_name="roc.png"):
     plt.figure(figsize=(6, 6))
     for name, run in all_runs.items():
