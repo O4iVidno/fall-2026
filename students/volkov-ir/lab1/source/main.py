@@ -7,7 +7,7 @@ from task import run_correlation_init, run_multistart, run_sampling_comparison
 from initialization import calculate_w_random, calculate_q_start
 from model import calculate_sgd
 from metric import calculate_accuracy
-from data_preprocessing import train_and_test, standardize, X, y, feature_names
+from data_preprocessing import prepare_data, standardize
 from report import (evaluate, print_run, print_summary, plot_margins, plot_margins_start_vs_final, plot_multistart,
                     plot_roc, plot_confusion_matrices, plot_weights)
 np.random.seed(42)  # фиксируем случайность, чтобы результаты совпадали с README
@@ -15,7 +15,7 @@ np.random.seed(42)  # фиксируем случайность, чтобы ре
 report.SAVE_DIR = Path(__file__).parent.parent / "images"  # графики для README
 
 test_size = 0.3
-X_train, y_train, X_test, y_test = train_and_test(X, y, test_size)
+X_train, y_train, X_test, y_test, feature_names = prepare_data(test_size)
 
 scale_columns = [feature_names.index('Age'), feature_names.index('Fare')]
 X_train, X_test = standardize(X_train, X_test, scale_columns)

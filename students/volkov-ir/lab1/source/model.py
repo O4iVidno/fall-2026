@@ -37,13 +37,16 @@ def calculate_sgd(X, y, w, momentum, q_update_rate, Q_old, l2_strength, margin_e
         else:
             raise ValueError("sampling должен быть 'random' или 'margin'")
 
+        # w_look = w - v * momentum
         x_i, y_i = X[i], y[i]
         Margin_i = calculate_margin(x_i, y_i, w)
+        # Margin_i = calculate_margin(x_i, y_i, w_look)
         loss_i = calculate_loss(Margin_i)
         gradient_i = calculate_gradient(x_i, y_i, Margin_i)
         l2 = calculate_l2(w, l2_strength)
+        # l2 = calculate_l2(w_look, l2_strength)
         gradient_l2 = gradient_i+l2
-        h_i = calculate_h(Margin_i, x_i, y_i, gradient_l2) * learning_rate
+        h_i = calculate_h(x_i, gradient_l2, l2_strength) * learning_rate
         v = momentum*v + (np.multiply(h_i,gradient_l2))
         w = w-v
         Q = calculate_q(q_update_rate, Q_old, loss_i)
@@ -68,9 +71,13 @@ def calculate_l2(w, l2_strength):
     return l2
 
 
-def calculate_h(M, x, y, gradient):
-    g = (gradient @ x)*y
-    return (M-1)/g
+def calculate_h(X, gradient, l2_strength):
+    gradient_no_bias = gradient.copy()
+    gradient_no_bias[0] = 0
+    denominator = 2 * (gradient @ X) ** 2 + l2_strength * (gradient_no_bias @ gradient_no_bias)
+    if denominator == 0:
+        return 0.0
+    return (gradient @ gradient) / denominator
 
 
 def calculate_p(M, margin_epsilon):
