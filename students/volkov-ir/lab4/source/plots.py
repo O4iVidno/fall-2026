@@ -31,3 +31,20 @@ def plot_e_m(e_m, path):
     plt.tight_layout()
     plt.savefig(path, dpi=130)
     plt.close()
+
+
+def plot_rmse(rmse_list, rmse_full, path):
+    n = len(rmse_list)
+
+    plt.figure(figsize=(7, 4.5))
+    plt.plot(range(1, n + 1), rmse_list, marker="o", color="black", label="регрессия на m новых признаках")
+    # обычная регрессия на всех исходных признаках
+    plt.axhline(rmse_full, color="gray", ls="--", label="LinearRegression на исходных признаках")
+    plt.xlabel("число новых признаков m")
+    plt.ylabel("RMSE на test")
+    plt.title("Ошибка прогноза mpg в зависимости от m")
+    plt.legend()
+    plt.grid(alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(path, dpi=130)
+    plt.close()
