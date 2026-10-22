@@ -1,119 +1,72 @@
 import numpy as np
 from data_preprocessing import prepare_data
+import model
+import metric
+import sklearn_baseline
+import plots
 
+# EPSILON - порог остановки по изменению Q
+# SOLVERS - sklearn: lbfgs - по умолчанию, newton-cholesky - метод Ньютона
+EPSILON = 1e-9
+SOLVERS = ["lbfgs", "newton-cholesky"]
+
+SAVE_PLOTS = False
+
+
+# 1 - данные
 X_train, X_test, y_train, y_test, feature_names = prepare_data()
+print("1. Данные")
+print("train", X_train.shape, "test", X_test.shape)
+print("доля класса +1: train", round(np.mean(y_train == 1), 3), "test", round(np.mean(y_test == 1), 3))
+print()
 
+# 2 - Ньютон-Рафсон из нулей и IRLS из МНК
+w_newton, Q_newton, w_list_newton, Q_list_newton, count_newton = model.method_newton_raph(X_train, y_train, model.init_w_zero(X_train), EPSILON)
+w_irls, Q_irls, w_list_irls, Q_list_irls, count_irls = model.method_irls(X_train, y_train, model.init_w(X_train, y_train), EPSILON)
 
-def calculate_z(X, w):
-    return X @ w
+print("2. Ньютон-Рафсон и IRLS")
+print("Ньютон-Рафсон, старт из нулей: итераций", count_newton, "Q =", round(Q_newton, 6))
+for t in range(0, len(Q_list_newton)):
+    print("  итерация", t, "Q =", round(Q_list_newton[t], 6))
+print()
+print("IRLS, старт из МНК: итераций", count_irls, "Q =", round(Q_irls, 6))
+for t in range(0, len(Q_list_irls)):
+    print("  итерация", t, "Q =", round(Q_list_irls[t], 6))
+print()
 
-def calculate_margin(X, w, y):
-    mult_vector = np.dot(X, w)
-    return np.multiply(mult_vector, y)
+if SAVE_PLOTS:
+    plots.plot_q_history(Q_list_newton, Q_list_irls, "../images/q_newton_irls.png")
 
-def calculate_sigmoid(per):
-    return 1 / (1 + np.exp(-per))
+# 3 - сравнение со sklearn
+print("3. Сравнение со sklearn")
+for solver in SOLVERS:
+    w_sk, proba_sk, pred_sk, count_sk = sklearn_baseline.calculate_sklearn_logreg(X_train, y_train, X_test, solver)
+    diff_w, diff_proba, count_pred = sklearn_baseline.calculate_comparison(X_test, w_newton, w_sk, proba_sk, pred_sk)
+    print(solver + ", итераций:", count_sk)
+    print("  Ньютон-Рафсон: веса", format(diff_w, ".1e"), "| вероятности", format(diff_proba, ".1e"), "| несовпадений", count_pred)
+    diff_w, diff_proba, count_pred = sklearn_baseline.calculate_comparison(X_test, w_irls, w_sk, proba_sk, pred_sk)
+    print("  IRLS:          веса", format(diff_w, ".1e"), "| вероятности", format(diff_proba, ".1e"), "| несовпадений", count_pred)
+print()
 
-def calculate_loss(margin):
-    # если m >= 0, то np.log(1 + np.exp(-margin))
-    # если m < 0,  то -margin np.log(1 + np.exp(margin))
-    return np.maximum(0, -margin) + np.log(1 + np.exp(-np.abs(margin)))
+# эталон для метрик - lbfgs
+w_sklearn = sklearn_baseline.calculate_sklearn_logreg(X_train, y_train, X_test, "lbfgs")[0]
 
-def calculate_Q(loss):
-    return np.sum(loss)
-
-def calculate_Qmean(loss):
-    return np.sum(loss)/len(loss)
-
-def calculate_gradient(X, y, sigmoid_m):
-    a = (1 - sigmoid_m) * y
-    gradient = -X.T @ a
-    return gradient
-
-def calculate_hessian(X, sigmoid_m):
-    d = (1 - sigmoid_m) * sigmoid_m
-    h = X.T * d @ X
-    return h
-
-def init_w_zero(X):
-    return np.zeros(X.shape[1])
-
-
-def method_newton_raph(X, y, w, epsilon):
-    count_q = 0
-    limit = 100
-    w_list = []
-    Q_list = []
-    Q_old = np.inf
-
-    while True:
-
-        margin = calculate_margin(X, w, y)
-        loss = calculate_loss(margin)
-        Q = calculate_Q(loss)
-        count_q += 1
-
-        Q_list.append(Q)
-        w_list.append(w)
-
-        if abs(Q - Q_old) <= epsilon:
-            break
-        Q_old = Q
-
-        if count_q >= limit:
-            break
-
-        sigmoid_m = calculate_sigmoid(margin)
-        gra = calculate_gradient(X, y, sigmoid_m)
-        hes = calculate_hessian(X, sigmoid_m)
-        delta_w = np.linalg.inv(hes) @ gra
-        w = w - delta_w
-
-    return w, Q, w_list, Q_list, count_q
-
-def init_w(X, y):
-    w  = np.linalg.inv(X.T @ X) @ (X.T @ y)
-    return w
-
-# # def method_irls(X, y, w, epsilon):
-# #
-# #     return w, Q, w_list, Q_list, count_q
-#
-# # X = np.array([[1, 2.5], [1, -1], [1, 0.5]])
-# # y = np.array([1, 1, -1])
-# X = np.array([[1, 0.8, -1.5], [1, -2.0, 0.6], [1, 3.0, 1.0], [1, 0.5, 2.0], [1, -1.0, -0.5], [1, 1.5, 0.0], [1, -0.3, 1.2]])
-# y = np.array([-1, 1, 1, 1, 1, -1, -1])
-# # w = init_w_zero(X)
-# epsilon = 1e-9
-#
-# # w, Q, w_list, Q_list, count = method_newton_raph(X, y, w, epsilon)
-# # print(w)
-# # print(Q)
-# # print(Q_list)
-# # print(w_list)
-# # print(count)
-#
-# # z = calculate_z(X, w)
-# # margin = calculate_margin(X, w, y)
-# # sigmoid_z = calculate_sigmoid(z)
-# # sigmoid_m = calculate_sigmoid(margin)
-# # loss = calculate_loss(margin)
-# # q = calculate_Q(loss)
-# # qmean = calculate_Qmean(loss)
-# # gra = calculate_gradient(X, y, sigmoid_m)
-# # hes = calculate_hessian(X, sigmoid_m)
-# #
-# # print(z)
-# # print(margin)
-# # print(sigmoid_z)
-# # print(sigmoid_m)
-# # print(loss)
-# # print(q)
-# # print(qmean)
-# # print(gra)
-# # print(hes)
-# w = init_w(X, y)
-# print(w)
-# sigma_m = calculate_sigmoid(calculate_margin(X, w, y))
-# gamma = np.sqrt((1-sigma_m)*sigma_m)
-# print(gamma)
+# 4 - метрики на test
+print("4. Метрики на test")
+names = ["Ньютон-Рафсон", "IRLS", "sklearn"]
+weights = [w_newton, w_irls, w_sklearn]
+for i in range(0, len(names)):
+    accuracy = metric.calculate_accuracy(X_test, y_test, weights[i])
+    matrix, TP, TN, FP, FN = metric.confusion_matrix(X_test, y_test, weights[i])
+    precision = metric.calculate_precision(TP, FP)
+    recall = metric.calculate_recall(TP, FN)
+    f1 = metric.calculate_f1(precision, recall)
+    log_loss = metric.calculate_log_loss(X_test, y_test, weights[i])
+    print(names[i])
+    print("  accuracy ", round(accuracy, 4))
+    print("  precision", round(precision, 4))
+    print("  recall   ", round(recall, 4))
+    print("  f1       ", round(f1, 4))
+    print("  log-loss ", round(log_loss, 4))
+    print("  TP", TP, "FN", FN, "FP", FP, "TN", TN)
+    print()
