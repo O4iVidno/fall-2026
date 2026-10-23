@@ -65,7 +65,7 @@
 
 $$\sigma(z) = \frac{1}{1 + e^{-z}}, \qquad P(y = +1 \mid x) = \sigma(w^{\top} x)$$
 
-Для обоих классов вероятность правильного ответа записывается одной формулой через отступ $M_i = y_i \, w^{\top} x_i$. Положительный отступ значит, что модель угадала.
+Для обоих классов вероятность правильного ответа записывается одной формулой через отступ $M_i = y_i w^{\top} x_i$. Положительный отступ значит, что модель угадала.
 
 $$P(y_i \mid x_i) = \sigma(M_i)$$
 
@@ -87,7 +87,7 @@ $$\ln\left(1 + e^{-M}\right) = \max(-M, 0) + \ln\left(1 + e^{-|M|}\right)$$
 
 Нужны градиент (наклон) и гессиан (кривизна), где $\sigma_i = \sigma(M_i)$.
 
-$$\frac{\partial Q}{\partial w_j} = -\sum_{i=1}^{\ell} (1 - \sigma_i)\, y_i\, x_{ij}, \qquad \frac{\partial^2 Q}{\partial w_j \partial w_k} = \sum_{i=1}^{\ell} (1 - \sigma_i)\, \sigma_i\, x_{ij}\, x_{ik}$$
+$$\frac{\partial Q}{\partial w_j} = -\sum_{i=1}^{\ell} (1 - \sigma_i) y_i x_{ij}, \qquad \frac{\partial^2 Q}{\partial w_j \partial w_k} = \sum_{i=1}^{\ell} (1 - \sigma_i) \sigma_i x_{ij} x_{ik}$$
 
 В матричном виде $g = -X^{\top}\big((1 - \sigma) \circ y\big)$ и $H = X^{\top} D X$, где $D$ – диагональная матрица с числами $(1 - \sigma_i)\sigma_i$. Шаг метода (длина шага $h = 1$)
 
@@ -105,12 +105,12 @@ $$w^{(t+1)} = w^{(t)} - H^{-1} g$$
 
 1. Начальные веса – решение обычного МНК по меткам $\pm 1$, $w = (X^{\top} X)^{-1} X^{\top} y$.
 2. На каждой итерации считаются вероятности $\sigma_i = \sigma(M_i)$ и
-   - корень из веса объекта $\gamma_i = \sqrt{(1 - \sigma_i)\,\sigma_i}$,
-   - взвешенная матрица $\tilde{F} = \operatorname{diag}(\gamma)\, X$, каждая строка $X$ умножается на свое $\gamma_i$,
+   - корень из веса объекта $\gamma_i = \sqrt{(1 - \sigma_i)\sigma_i}$,
+   - взвешенная матрица $\tilde{F} = \mathrm{diag}(\gamma) X$, каждая строка $X$ умножается на свое $\gamma_i$,
    - модифицированные ответы $\tilde{y}_i = y_i \sqrt{(1 - \sigma_i) / \sigma_i}$.
 3. Шаг $w^{(t+1)} = w^{(t)} + (\tilde{F}^{\top} \tilde{F})^{-1} \tilde{F}^{\top} \tilde{y}$.
 
-Почему это тот же Ньютон. $\tilde{F}^{\top} \tilde{F} = X^{\top} D X = H$, то есть это гессиан. $\tilde{F}^{\top} \tilde{y} = \sum_i (1 - \sigma_i)\, y_i\, x_i = -g$, то есть это минус градиент. Значит, шаг IRLS равен $-H^{-1} g$, ровно шагу Ньютона.
+Почему это тот же Ньютон. $\tilde{F}^{\top} \tilde{F} = X^{\top} D X = H$, то есть это гессиан. $\tilde{F}^{\top} \tilde{y} = \sum_i (1 - \sigma_i) y_i x_i = -g$, то есть это минус градиент. Значит, шаг IRLS равен $-H^{-1} g$, ровно шагу Ньютона.
 
 Цикл остановки и защиты от зацикливания такой же, как у Ньютона.
 
