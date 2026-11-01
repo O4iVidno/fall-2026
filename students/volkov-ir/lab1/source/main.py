@@ -4,7 +4,7 @@ import numpy as np
 import report
 from sklearn_baseline import run_sklearn_baseline
 from task import run_correlation_init, run_multistart, run_sampling_comparison
-from initialization import calculate_w_random, calculate_q_start
+from initialization import calculate_w_correlation, calculate_w_random, calculate_q_start
 from model import calculate_sgd
 from metric import calculate_accuracy
 from data_preprocessing import prepare_data, standardize
@@ -28,7 +28,8 @@ X_train, X_test = standardize(X_train, X_test, scale_columns)
 # tolerance - насколько мало должно измениться Q за одну эпоху (len(X) шагов), чтобы эпоха считалась "спокойной"; 3 спокойные эпохи подряд - остановка
 # q_start_size - количество случайных объектов, по которым рассчитывается стартовое значение Q
 # n_stars - число случайных инициализаций в multistart
-# learning_rate - доля от шага скорейшего спуска h: 1 - полностью подогнать веса под текущий объект, 0.01 - сделать 1% этой поправки (плавное обучение)
+# learning_rate - инерция с постоянным шагом в режиме constant
+# step_fraction - доля от шага скорейшего спуска h в режиме steepest, 1 - полный шаг
 momentum = 0.5
 q_update_rate = 0.001
 l2_strength = 1e-3
@@ -36,22 +37,20 @@ margin_epsilon = 1e-5
 tolerance = 1e-2
 q_start_size = 50
 n_starts = 5
-learning_rate = 1e-2
+learning_rate = 2e-3
+step_fraction = 1e-2
 
-SHOW_PLOTS = True
+SHOW_PLOTS = False
 
 all_runs = {}  # название метода -> результат обучения (веса, Q, итерации)
 
 # 9.1 — инициализация через корреляцию
-print("Обучение 9.1 ...")
 all_runs["9.1 корреляция"] = run_correlation_init(X_train, y_train, momentum, q_update_rate, l2_strength, margin_epsilon, tolerance, q_start_size, learning_rate)
 
 # 9.2 — случайная инициализация + мультистарт
-print("Обучение 9.2 ...")
 all_runs["9.2 мультистарт"] = run_multistart(X_train, y_train, momentum, q_update_rate, l2_strength, margin_epsilon, tolerance, q_start_size, n_starts, learning_rate)
 
 # 9.3 — один и тот же случайный старт, два способа предъявления объектов
-print("Обучение 9.3 ...")
 w_start_fixed = calculate_w_random(X_train.shape[1])
 run_margin, run_uniform = run_sampling_comparison(X_train, y_train, momentum, q_update_rate, l2_strength, margin_epsilon, tolerance, q_start_size, w_start_fixed, learning_rate)
 all_runs["9.3 по модулю отступа"] = run_margin
@@ -88,8 +87,18 @@ for gamma in [0.0, 0.5, 0.9]:
     for seed in range(3):
         np.random.seed(seed)
         Q0 = calculate_q_start(X_train, y_train, w0, q_start_size)
-        w, Q, c = calculate_sgd(X_train, y_train, w0.copy(), gamma, q_update_rate, Q0, l2_strength, margin_epsilon, tolerance, learning_rate, sampling="random")
+        w, Q, c = calculate_sgd(X_train, y_train, w0.copy(), gamma, q_update_rate, Q0, l2_strength, margin_epsilon, tolerance, learning_rate, sampling="random", step="constant")
         acc_tr.append(calculate_accuracy(X_train, y_train, w))
         acc_te.append(calculate_accuracy(X_test, y_test, w))
         iters.append(c)
     print(f"momentum={gamma}: acc train {np.mean(acc_tr):.3f}, acc test {np.mean(acc_te):.3f}, итераций в среднем {np.mean(iters):.0f}")
+
+
+# Сравнение режимов шага, один и тот же старт
+print("Сравнение режимов шага:")
+w_start = calculate_w_correlation(X_train, y_train)
+Q_start = calculate_q_start(X_train, y_train, w_start, q_start_size)
+w_constant, Q_constant, count_constant = calculate_sgd(X_train, y_train, w_start.copy(), momentum, q_update_rate, Q_start, l2_strength, margin_epsilon, tolerance, learning_rate, sampling="random", step="constant")
+w_steepest, Q_steepest, count_steepest = calculate_sgd(X_train, y_train, w_start.copy(), momentum, q_update_rate, Q_start, l2_strength, margin_epsilon, tolerance, step_fraction, sampling="random", step="steepest")
+print("constant: acc train", round(calculate_accuracy(X_train, y_train, w_constant), 3), "acc test", round(calculate_accuracy(X_test, y_test, w_constant), 3), "шагов", count_constant)
+print("steepest: acc train", round(calculate_accuracy(X_train, y_train, w_steepest), 3), "acc test", round(calculate_accuracy(X_test, y_test, w_steepest), 3), "шагов", count_steepest)

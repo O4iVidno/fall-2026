@@ -18,7 +18,7 @@ def calculate_q(q_update_rate, q_old, loss):
     return q_update_rate*loss+(1-q_update_rate)*q_old
 
 
-def calculate_sgd(X, y, w, momentum, q_update_rate, Q_old, l2_strength, margin_epsilon, tolerance, learning_rate, sampling):
+def calculate_sgd(X, y, w, momentum, q_update_rate, Q_old, l2_strength, margin_epsilon, tolerance, learning_rate, sampling, step):
     count = 0
     limit = 1 * 10**5
     recalc_every = 100
@@ -46,8 +46,14 @@ def calculate_sgd(X, y, w, momentum, q_update_rate, Q_old, l2_strength, margin_e
         l2 = calculate_l2(w, l2_strength)
         # l2 = calculate_l2(w_look, l2_strength)
         gradient_l2 = gradient_i+l2
-        h_i = calculate_h(x_i, gradient_l2, l2_strength) * learning_rate
-        v = momentum*v + (np.multiply(h_i,gradient_l2))
+        if step == "constant":
+            h_i = learning_rate
+            v = momentum*v + np.multiply(h_i,gradient_l2)
+        elif step == "steepest":
+            h_i = calculate_h(x_i, gradient_l2, l2_strength) * learning_rate
+            v = np.multiply(h_i,gradient_l2)
+        else:
+            raise ValueError("step должен быть 'constant' или 'steepest'")
         w = w-v
         Q = calculate_q(q_update_rate, Q_old, loss_i)
         count += 1
