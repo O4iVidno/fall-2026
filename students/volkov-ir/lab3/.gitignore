@@ -3,6 +3,5 @@ __pycache__/
 .idea/
 .DS_Store
 
-# ноутбуки и личные заметки в репозиторий не кладем
 *.ipynb
 source/explanations.md
