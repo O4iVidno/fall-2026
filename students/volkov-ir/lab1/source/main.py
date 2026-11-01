@@ -29,7 +29,6 @@ X_train, X_test = standardize(X_train, X_test, scale_columns)
 # q_start_size - количество случайных объектов, по которым рассчитывается стартовое значение Q
 # n_stars - число случайных инициализаций в multistart
 # learning_rate - инерция с постоянным шагом в режиме constant
-# step_fraction - доля от шага скорейшего спуска h в режиме steepest, 1 - полный шаг
 momentum = 0.5
 q_update_rate = 0.001
 l2_strength = 1e-3
@@ -38,7 +37,6 @@ tolerance = 1e-2
 q_start_size = 50
 n_starts = 5
 learning_rate = 2e-3
-step_fraction = 1e-2
 
 SHOW_PLOTS = False
 
@@ -87,7 +85,7 @@ for gamma in [0.0, 0.5, 0.9]:
     for seed in range(3):
         np.random.seed(seed)
         Q0 = calculate_q_start(X_train, y_train, w0, q_start_size)
-        w, Q, c = calculate_sgd(X_train, y_train, w0.copy(), gamma, q_update_rate, Q0, l2_strength, margin_epsilon, tolerance, learning_rate, sampling="random", step="constant")
+        w, Q, c = calculate_sgd(X_train, y_train, w0.copy(), gamma, q_update_rate, Q0, l2_strength, margin_epsilon, tolerance, sampling="random", step="constant", learning_rate=learning_rate)
         acc_tr.append(calculate_accuracy(X_train, y_train, w))
         acc_te.append(calculate_accuracy(X_test, y_test, w))
         iters.append(c)
@@ -98,7 +96,8 @@ for gamma in [0.0, 0.5, 0.9]:
 print("Сравнение режимов шага:")
 w_start = calculate_w_correlation(X_train, y_train)
 Q_start = calculate_q_start(X_train, y_train, w_start, q_start_size)
-w_constant, Q_constant, count_constant = calculate_sgd(X_train, y_train, w_start.copy(), momentum, q_update_rate, Q_start, l2_strength, margin_epsilon, tolerance, learning_rate, sampling="random", step="constant")
-w_steepest, Q_steepest, count_steepest = calculate_sgd(X_train, y_train, w_start.copy(), momentum, q_update_rate, Q_start, l2_strength, margin_epsilon, tolerance, step_fraction, sampling="random", step="steepest")
+w_constant, Q_constant, count_constant = calculate_sgd(X_train, y_train, w_start.copy(), momentum, q_update_rate, Q_start, l2_strength, margin_epsilon, tolerance, sampling="random", step="constant", learning_rate=learning_rate)
+# в режиме steepest шаг равен h*, learning_rate не нужен
+w_steepest, Q_steepest, count_steepest = calculate_sgd(X_train, y_train, w_start.copy(), momentum, q_update_rate, Q_start, l2_strength, margin_epsilon, tolerance, sampling="random", step="steepest")
 print("constant: acc train", round(calculate_accuracy(X_train, y_train, w_constant), 3), "acc test", round(calculate_accuracy(X_test, y_test, w_constant), 3), "шагов", count_constant)
 print("steepest: acc train", round(calculate_accuracy(X_train, y_train, w_steepest), 3), "acc test", round(calculate_accuracy(X_test, y_test, w_steepest), 3), "шагов", count_steepest)

@@ -7,7 +7,7 @@ from model import calculate_sgd
 def run_correlation_init(X_train, y_train, momentum, q_update_rate, l2_strength, margin_epsilon, tolerance, q_start_size, learning_rate):
     w_start = calculate_w_correlation(X_train, y_train)
     Q_start = calculate_q_start(X_train, y_train, w_start, q_start_size)
-    w_final, Q_final, count_final = calculate_sgd(X_train, y_train, w_start, momentum, q_update_rate, Q_start, l2_strength, margin_epsilon, tolerance, learning_rate, sampling="random", step="constant")
+    w_final, Q_final, count_final = calculate_sgd(X_train, y_train, w_start, momentum, q_update_rate, Q_start, l2_strength, margin_epsilon, tolerance, sampling="random", step="constant", learning_rate=learning_rate)
     return {"w_start": w_start, "w": w_final, "Q": Q_final, "iters": count_final}
 
 # 9.2
@@ -20,7 +20,7 @@ def run_multistart(X_train, y_train, momentum, q_update_rate, l2_strength, margi
         n = X_train.shape[1]
         w_start = calculate_w_random(n)
         Q_start = calculate_q_start(X_train, y_train, w_start, q_start_size)
-        w_final, Q_final, count_final = calculate_sgd(X_train, y_train, w_start, momentum, q_update_rate, Q_start, l2_strength, margin_epsilon, tolerance, learning_rate, sampling="random", step="constant")
+        w_final, Q_final, count_final = calculate_sgd(X_train, y_train, w_start, momentum, q_update_rate, Q_start, l2_strength, margin_epsilon, tolerance, sampling="random", step="constant", learning_rate=learning_rate)
         acc_train = calculate_accuracy(X_train, y_train, w_final)
         all_acc_train.append(acc_train)
         if acc_train > acc_train_best:
@@ -34,8 +34,8 @@ def run_multistart(X_train, y_train, momentum, q_update_rate, l2_strength, margi
 def run_sampling_comparison(X_train, y_train, momentum, q_update_rate, l2_strength, margin_epsilon, tolerance, q_start_size, w_start, learning_rate):
     Q_start = calculate_q_start(X_train, y_train, w_start, q_start_size)
 
-    w_margin, Q_margin, count_margin = calculate_sgd(X_train, y_train, w_start.copy(), momentum, q_update_rate, Q_start, l2_strength, margin_epsilon, tolerance, learning_rate,  sampling="margin", step="constant")
-    w_uni, Q_uni, count_uni = calculate_sgd(X_train, y_train, w_start.copy(), momentum, q_update_rate, Q_start, l2_strength, margin_epsilon, tolerance, learning_rate, sampling="random", step="constant")
+    w_margin, Q_margin, count_margin = calculate_sgd(X_train, y_train, w_start.copy(), momentum, q_update_rate, Q_start, l2_strength, margin_epsilon, tolerance, sampling="margin", step="constant", learning_rate=learning_rate)
+    w_uni, Q_uni, count_uni = calculate_sgd(X_train, y_train, w_start.copy(), momentum, q_update_rate, Q_start, l2_strength, margin_epsilon, tolerance, sampling="random", step="constant", learning_rate=learning_rate)
 
     margin = {"w_start": w_start, "w": w_margin, "Q": Q_margin, "iters": count_margin}
     uniform = {"w_start": w_start, "w": w_uni, "Q": Q_uni, "iters": count_uni}
